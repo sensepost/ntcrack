@@ -2,6 +2,8 @@
 
 Left To My Own Devices - NT cracker
 
+A full writeup of how it works is available at [the SensePost blog](https://sensepost.com/blog/2022/left-to-my-own-devices–fast-ntcracking-in-rust/)
+
 # Invocation
 
 `./ntcrack <input hashlist> < <wordlist>`
