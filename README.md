@@ -1,4 +1,4 @@
-# ltmod-ntcrack
+# ntcrack
 
 Left To My Own Devices - NT cracker
 
