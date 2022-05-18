@@ -320,14 +320,14 @@ fn setup_workers(hashes: &Hashes) -> Workers {
                             // check if the generated hash is in our input hash list
                             if hashes_thread.hashlist.contains_key(&hash) {
                                 stats.cracked += 1;
-                                // extend_from_slice is faster than push
-                                out.extend_from_slice(clear);
-                                out.extend_from_slice(&[58]);
                                 //writing each character is faster than doing it in one go
                                 for x in hash {
                                     write!(&mut out, "{:02x}", x).unwrap();
                                 }
-                                out.extend_from_slice(&[10]);
+                                // extend_from_slice is faster than push
+                                out.extend_from_slice(&[58]); // colon
+                                out.extend_from_slice(clear); // clear text
+                                out.extend_from_slice(&[10]); // newline
                                 // check if our output buffer should be flushed
                                 if out.len() >= 8192 {
                                     // make sure this comparison aligns with capacity
