@@ -1,15 +1,14 @@
-extern crate generic_array;
 extern crate hash_hasher;
 extern crate hex;
 extern crate num_cpus;
 extern crate ripline;
 
+mod md4;
+
 use crossbeam_channel::unbounded;
-use generic_array::{typenum::U16, GenericArray};
 // Special hasher for already hashed data - NTLM is a hash
 use hash_hasher::HashedMap;
 use hex::FromHex;
-use md4::{Digest, Md4};
 use memmap2::Mmap;
 use ripline::lines::LineIter;
 use std::env;
@@ -100,7 +99,8 @@ fn cache_file(file: &mut File, length: usize, block_size: usize, offset: u64) ->
 #[derive(Clone)]
 struct Hashes {
     // Structuroe to hold our hashlist /*{{{*/
-    hashlist: HashedMap<GenericArray<u8, U16>, i8>,
+    //hashlist: HashedMap<GenericArray<u8, U16>, i8>,
+    hashlist: HashedMap<[u8; 16], i8>,
     starts: [bool; 256],
     ends: [bool; 256],
     big: bool,
@@ -122,15 +122,16 @@ fn parse_hashes(path: &str) -> Result<Hashes, Box<dyn Error>> {
     // Convert input hashes file to HashMap of GenericArray's
     // Since searching these hashes is the biggest cost of this whole thing
     // we use a HashMap for 0(1)~ performance
-    let hashlist: HashedMap<GenericArray<u8, U16>, _> = iter
+    //let hashlist: HashedMap<GenericArray<u8, U16>, _> = iter
+    let hashlist: HashedMap<[u8; 16], _> = iter
         .map(|l| {
             let raw_hash = <[u8; 16]>::from_hex(&l[0..l.len() - 1]).unwrap();
-            let hashes: GenericArray<u8, U16> = *GenericArray::from_slice(&raw_hash);
+            //let hashes: GenericArray<u8, U16> = *GenericArray::from_slice(&raw_hash);
             // Store the first and last byte of the hash in an array
             // these are used for a fast checks to avoid a more expensive HashMap lookup
             starts[raw_hash[0] as usize] = true;
             ends[raw_hash[15] as usize] = true;
-            (hashes, 0)
+            (raw_hash, 0)
         })
         .collect();
 
@@ -305,7 +306,9 @@ fn setup_workers(hashes: &Hashes) -> Workers {
                             }
                             // doing this single Md4 digest is faster than
                             // multiple updates() + finalize()
-                            let hash = Md4::digest(&utf16);
+                            let mut md = md4::MD4::new();
+                            md.digest(&utf16);
+                            let hash = md.get_hash();
 
                             if !hashes_thread.big {
                                 // for small hashlists, can we get away with this cheaper check
@@ -488,7 +491,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     // if you're seeing too many waits, try optimising this by taking it via cmd
     // line arg below and testing different sizes. 393k works well on a M1 Pro
     // MBP.
-    let chunk_size = 393_728;
+    //let chunk_size = 393_728;
+    let chunk_size = 5_248_000;
     /*
     let mut chunk_size = &mut env::args()
         .nth(2)
