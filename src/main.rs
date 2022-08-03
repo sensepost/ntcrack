@@ -292,12 +292,13 @@ fn setup_workers(hashes: &Hashes) -> Workers {
                         for clear in message.split(|c| *c == 10_u8).filter(|l| !l.is_empty()) {
                             stats.hashed += 1;
                             //println!("Thread {} recieved: '{:?}'",j,std::str::from_utf8(clear));
-                            // faster to iter & encode chars than the encode_utf16 str iter
-                            for n in clear.iter() {
-                                let c = char::from(*n).encode_utf16(&mut b);
+                            for (dst, src) in utf16.chunks_exact_mut(2).zip(clear.iter()) {
+                                // faster to iter & encode chars than the encode_utf16 str iter
+                                let c = char::from(*src).encode_utf16(&mut b);
                                 // align_to is unsafe, but faster than to_le_bytes
                                 unsafe {
-                                    utf16.extend_from_slice(c.align_to::<u8>().1);
+                                    // copy_from_slice is *much* faster than extend_from_slice!
+                                    dst.copy_from_slice(c.align_to::<u8>().1);
                                 }
                             }
                             // encoding error
