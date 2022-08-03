@@ -160,7 +160,7 @@ struct Wordlist {
     mmap: Mmap,
     cache_point: usize,
     length: usize,
-    pages: usize,
+    //pages: usize,
     cache_size: usize,
 }
 /*}}}*/
