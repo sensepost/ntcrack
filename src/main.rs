@@ -264,9 +264,9 @@ fn setup_workers(hashes: &Hashes) -> Workers {
         //let to_find_thread = hashes.hashlist.clone();
         threadhand.push(thread::spawn(move || {
             // The in-thread worker code /*{{{*/
-            // Pre-allocate the objects we'll reuse to reduce alloc's
-            let mut utf16: Vec<u8> = Vec::with_capacity(1024); // utf16 encoded string as bytes
+            // Pre-allocate to reduce alloc overhead
             let mut out: Vec<u8> = Vec::with_capacity(8192);
+            let mut utf16: [u8; 1024] = [0_u8; 1024];
             let mut b = [0; 2]; // needed for utf16 encoding, but not used
             let mut stats = Stats {
                 cracked: 0,
@@ -292,14 +292,16 @@ fn setup_workers(hashes: &Hashes) -> Workers {
                         for clear in message.split(|c| *c == 10_u8).filter(|l| !l.is_empty()) {
                             stats.hashed += 1;
                             //println!("Thread {} recieved: '{:?}'",j,std::str::from_utf8(clear));
-                            // faster to iter & encode chars than the encode_utf16 str iter
-                            for n in clear.iter() {
-                                let c = char::from(*n).encode_utf16(&mut b);
+
+                            for (dst, src) in utf16.chunks_mut(2).zip(clear.iter()) {
+                                // faster to iter & encode chars than the encode_utf16 str iter
+                                let c = char::from(*src).encode_utf16(&mut b);
                                 // align_to is unsafe, but faster than to_le_bytes
                                 unsafe {
-                                    utf16.extend_from_slice(c.align_to::<u8>().1);
+                                    dst.copy_from_slice(c.align_to::<u8>().1);
                                 }
                             }
+
                             // encoding error
                             if utf16.is_empty() {
                                 continue;
@@ -307,7 +309,8 @@ fn setup_workers(hashes: &Hashes) -> Workers {
                             // doing this single Md4 digest is faster than
                             // multiple updates() + finalize()
                             let mut md = md4::MD4::new();
-                            md.digest(&utf16);
+                            md.digest(&utf16[..clear.len()*2]);
+                            //md.digest(&utf16);
                             let hash = md.get_hash();
 
                             if !hashes_thread.big {
@@ -315,7 +318,6 @@ fn setup_workers(hashes: &Hashes) -> Workers {
                                 if !hashes_thread.starts[hash[0] as usize]
                                     || !hashes_thread.ends[hash[15] as usize]
                                 {
-                                    utf16.clear();
                                     continue;
                                 }
                             }
@@ -344,8 +346,6 @@ fn setup_workers(hashes: &Hashes) -> Workers {
                                     stats.hashed = 0;
                                 }
                             }
-                            // clear our reused buffers
-                            utf16.clear();
                         }
                     }
                 }

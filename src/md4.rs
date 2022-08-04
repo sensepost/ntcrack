@@ -95,197 +95,43 @@ impl MD4 {
 
     pub fn digest(&mut self, input: &[u8]) {
         self.block_len = self.block_len.wrapping_add(input.len() as u64);
-        let total = ((self.block_len / 55) + 1) * 64;
 
-        match total {
-            64 => {
-                for block in self.pad_64(&input).chunks_exact(64) {
-                    self.compress(block);
-                }
-            },
-            128 => {
-                for block in self.pad_128(&input).chunks_exact(64) {
-                    self.compress(block);
-                }
-            },
-            192 => {
-                for block in self.pad_192(&input).chunks_exact(64) {
-                    self.compress(block);
-                }
-            },
-            256 => {
-                for block in self.pad_256(&input).chunks_exact(64) {
-                    self.compress(block);
-                }
-            },
-            320 => {
-                for block in self.pad_320(&input).chunks_exact(64) {
-                    self.compress(block);
-                }
-            },
-            384 => {
-                for block in self.pad_384(&input).chunks_exact(64) {
-                    self.compress(block);
-                }
-            },
-            448 => {
-                for block in self.pad_448(&input).chunks_exact(64) {
-                    self.compress(block);
-                }
-            },
-            512 => {
-                for block in self.pad_512(&input).chunks_exact(64) {
-                    self.compress(block);
-                }
-            },
-            576 => {
-                for block in self.pad_576(&input).chunks_exact(64) {
-                    self.compress(block);
-                }
-            },
-            640 => {
-                for block in self.pad_640(&input).chunks_exact(64) {
-                    self.compress(block);
-                }
-            },
-            704 => {
-                for block in self.pad_704(&input).chunks_exact(64) {
-                    self.compress(block);
-                }
-            },
-            _ => panic!("input too big to hash: {total}"),
+        let mut pos = 0;
+        for block in input.chunks_exact(64) {
+            self.compress(block);
+            pos += 64;
+        }
+
+        //let total = ((self.block_len / 55) + 1) * 64;
+        let total = match (self.block_len + 9) % 64 {
+            0 => ((self.block_len + 9) / 64) * 64, 
+            _ => (((self.block_len + 9) / 64) + 1) * 64,
+        };
+        let padding = match (total - self.block_len) % 64 {
+            0 => ((total - self.block_len) / 64) * 64,
+            _ => (((total - self.block_len) / 64) + 1) * 64,
+        };
+
+        let mut buffer_64 = [0_u8; 64];
+        let mut buffer_128 = [0_u8; 128];
+
+        let buffer: &mut [u8] = match padding {
+            64 => &mut buffer_64,
+            128 => &mut buffer_128,
+            _ => panic!("too big {padding}"),
+        };
+        self.pad(&input[pos..],buffer, padding);
+
+        for block in buffer.chunks_exact(64) {
+            self.compress(block);
         }
     }
 
-    fn pad_64(&self, input: &[u8]) -> [u8; 64] {
-        const TOTAL: usize = 64;
-        let mut buffer = [0_u8; TOTAL];
-        let block_len = self.block_len as usize;
+    fn pad(&self, input: &[u8], output: &mut [u8], size: u64) {
         let bit_len: [u8; 8] = self.block_len.wrapping_mul(8).to_le_bytes();
 
-        buffer[..block_len].copy_from_slice(input);
-        buffer[block_len] = 0x80;
-        buffer[TOTAL - 8..].copy_from_slice(&bit_len);
-        buffer
-    }
-
-    fn pad_128(&self, input: &[u8]) -> [u8; 128] {
-        const TOTAL: usize = 128;
-        let mut buffer = [0_u8; TOTAL];
-        let block_len = self.block_len as usize;
-        let bit_len: [u8; 8] = self.block_len.wrapping_mul(8).to_le_bytes();
-
-        buffer[..block_len].copy_from_slice(input);
-        buffer[block_len] = 0x80;
-        buffer[TOTAL - 8..].copy_from_slice(&bit_len);
-        buffer
-    }
-
-    fn pad_192(&self, input: &[u8]) -> [u8; 192] {
-        const TOTAL: usize = 192;
-        let mut buffer = [0_u8; TOTAL];
-        let block_len = self.block_len as usize;
-        let bit_len: [u8; 8] = self.block_len.wrapping_mul(8).to_le_bytes();
-
-        buffer[..block_len].copy_from_slice(input);
-        buffer[block_len] = 0x80;
-        buffer[TOTAL - 8..].copy_from_slice(&bit_len);
-        buffer
-    }
-
-    fn pad_256(&self, input: &[u8]) -> [u8; 256] {
-        const TOTAL: usize = 256;
-        let mut buffer = [0_u8; TOTAL];
-        let block_len = self.block_len as usize;
-        let bit_len: [u8; 8] = self.block_len.wrapping_mul(8).to_le_bytes();
-
-        buffer[..block_len].copy_from_slice(input);
-        buffer[block_len] = 0x80;
-        buffer[TOTAL - 8..].copy_from_slice(&bit_len);
-        buffer
-    }
-
-    fn pad_320(&self, input: &[u8]) -> [u8; 320] {
-        const TOTAL: usize = 320;
-        let mut buffer = [0_u8; TOTAL];
-        let block_len = self.block_len as usize;
-        let bit_len: [u8; 8] = self.block_len.wrapping_mul(8).to_le_bytes();
-
-        buffer[..block_len].copy_from_slice(input);
-        buffer[block_len] = 0x80;
-        buffer[TOTAL - 8..].copy_from_slice(&bit_len);
-        buffer
-    }
-
-    fn pad_384(&self, input: &[u8]) -> [u8; 384] {
-        const TOTAL: usize = 384;
-        let mut buffer = [0_u8; TOTAL];
-        let block_len = self.block_len as usize;
-        let bit_len: [u8; 8] = self.block_len.wrapping_mul(8).to_le_bytes();
-
-        buffer[..block_len].copy_from_slice(input);
-        buffer[block_len] = 0x80;
-        buffer[TOTAL - 8..].copy_from_slice(&bit_len);
-        buffer
-    }
-
-    fn pad_448(&self, input: &[u8]) -> [u8; 448] {
-        const TOTAL: usize = 448;
-        let mut buffer = [0_u8; TOTAL];
-        let block_len = self.block_len as usize;
-        let bit_len: [u8; 8] = self.block_len.wrapping_mul(8).to_le_bytes();
-
-        buffer[..block_len].copy_from_slice(input);
-        buffer[block_len] = 0x80;
-        buffer[TOTAL - 8..].copy_from_slice(&bit_len);
-        buffer
-    }
-
-    fn pad_512(&self, input: &[u8]) -> [u8; 512] {
-        const TOTAL: usize = 512;
-        let mut buffer = [0_u8; TOTAL];
-        let block_len = self.block_len as usize;
-        let bit_len: [u8; 8] = self.block_len.wrapping_mul(8).to_le_bytes();
-
-        buffer[..block_len].copy_from_slice(input);
-        buffer[block_len] = 0x80;
-        buffer[TOTAL - 8..].copy_from_slice(&bit_len);
-        buffer
-    }
-
-    fn pad_576(&self, input: &[u8]) -> [u8; 576] {
-        const TOTAL: usize = 576;
-        let mut buffer = [0_u8; TOTAL];
-        let block_len = self.block_len as usize;
-        let bit_len: [u8; 8] = self.block_len.wrapping_mul(8).to_le_bytes();
-
-        buffer[..block_len].copy_from_slice(input);
-        buffer[block_len] = 0x80;
-        buffer[TOTAL - 8..].copy_from_slice(&bit_len);
-        buffer
-    }
-
-    fn pad_640(&self, input: &[u8]) -> [u8; 640] {
-        const TOTAL: usize = 640;
-        let mut buffer = [0_u8; TOTAL];
-        let block_len = self.block_len as usize;
-        let bit_len: [u8; 8] = self.block_len.wrapping_mul(8).to_le_bytes();
-
-        buffer[..block_len].copy_from_slice(input);
-        buffer[block_len] = 0x80;
-        buffer[TOTAL - 8..].copy_from_slice(&bit_len);
-        buffer
-    }
-
-    fn pad_704(&self, input: &[u8]) -> [u8; 704] {
-        const TOTAL: usize = 704;
-        let mut buffer = [0_u8; TOTAL];
-        let block_len = self.block_len as usize;
-        let bit_len: [u8; 8] = self.block_len.wrapping_mul(8).to_le_bytes();
-
-        buffer[..block_len].copy_from_slice(input);
-        buffer[block_len] = 0x80;
-        buffer[TOTAL - 8..].copy_from_slice(&bit_len);
-        buffer
-    }
+        output[..input.len()].copy_from_slice(input);
+        output[input.len()] = 0x80;
+        output[(size - 8) as usize..].copy_from_slice(&bit_len);
+    } 
 }
