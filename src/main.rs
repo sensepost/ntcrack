@@ -266,7 +266,7 @@ fn setup_workers(hashes: &Hashes) -> Workers {
             // The in-thread worker code /*{{{*/
             // Pre-allocate to reduce alloc overhead
             let mut out: Vec<u8> = Vec::with_capacity(8192);
-            let mut utf16: [u8; 1024] = [0_u8; 1024];
+            let mut utf16: [u8; 2048] = [0_u8; 2048]; //nobody hashes more than 1024 character passwords right?! cc @crypt0rr
             let mut b = [0; 2]; // needed for utf16 encoding, but not used
             let mut stats = Stats {
                 cracked: 0,
